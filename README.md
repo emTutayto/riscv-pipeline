@@ -33,8 +33,8 @@ Modular Verilog design (datapath, control, hazard unit)
 
 IF → ID → EX → MEM → WB
 
-Pipeline registers between stages
+- Pipeline registers between stages
 
-ALU and Register File
+- ALU and Register File
 
-Control Unit and Hazard Unit
+- Control Unit and Hazard Unit
