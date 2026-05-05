@@ -5,24 +5,43 @@ module ID_EX (
     input [2:0] funct3_in,
     input RegWrite_in, ALUSrc_in, ALUSrc_pc_in, MemWrite_in, MemRead_in, Branch_in, Jump_in,
     input [1:0] ResultSrc_in, ALUOp_in,
+    
+    // Đã sửa cú pháp: Đảm bảo có dấu phẩy nếu thêm port tiếp theo
+    input [6:0] funct7_in,
+    input [6:0] op_in,
+    
     output reg [31:0] PC_out, dataA_out, dataB_out, imm_ext_out,
     output reg [4:0] addA_out, addB_out, addD_out,
     output reg [2:0] funct3_out,
     output reg RegWrite_out, ALUSrc_out, ALUSrc_pc_out, MemWrite_out, MemRead_out, Branch_out, Jump_out,
-    output reg [1:0] ResultSrc_out, ALUOp_out
+    
+    // Đã thêm dấu phẩy (,) ở cuối dòng này
+    output reg [1:0] ResultSrc_out, ALUOp_out,
+    
+    output reg [6:0] funct7_out,
+    output reg [6:0] op_out
 );
+
     always @(posedge clk or posedge rst) begin
         if (rst) begin
             PC_out <= 0; dataA_out <= 0; dataB_out <= 0; imm_ext_out <= 0;
             addA_out <= 0; addB_out <= 0; addD_out <= 0; funct3_out <= 0;
             RegWrite_out <= 0; ALUSrc_out <= 0; ALUSrc_pc_out <= 0; MemWrite_out <= 0; MemRead_out <= 0;
-            ResultSrc_out <= 1; Branch_out <= 0; Jump_out <= 0; ALUOp_out <= 0; end
-        else 
-        if (flush) begin
-        PC_out <= 0; dataA_out <= 0; dataB_out <= 0; imm_ext_out <= 0;
+            ResultSrc_out <= 0; // Sửa 1 thành 0
+            Branch_out <= 0; Jump_out <= 0; ALUOp_out <= 0;
+            
+            // MỚI: Bổ sung reset cho 2 tín hiệu mới
+            funct7_out <= 0; op_out <= 0;
+        end
+        else if (flush) begin
+            PC_out <= 0; dataA_out <= 0; dataB_out <= 0; imm_ext_out <= 0;
             addA_out <= 0; addB_out <= 0; addD_out <= 0; funct3_out <= 0;
             RegWrite_out <= 0; ALUSrc_out <= 0; ALUSrc_pc_out <= 0; MemWrite_out <= 0; MemRead_out <= 0;
-            ResultSrc_out <= 1; Branch_out <= 0; Jump_out <= 0; ALUOp_out <= 0;
+            ResultSrc_out <= 0; // Sửa 1 thành 0
+            Branch_out <= 0; Jump_out <= 0; ALUOp_out <= 0;
+            
+            // MỚI: Bổ sung flush cho 2 tín hiệu mới
+            funct7_out <= 0; op_out <= 0;
         end
         else begin
             PC_out <= PC_in;
@@ -32,7 +51,7 @@ module ID_EX (
             addA_out <= addA_in; 
             addB_out <= addB_in; 
             addD_out <= addD_in;
-            funct3_out <= funct3_in; 
+            funct3_out <= funct3_in;
             RegWrite_out <= RegWrite_in; 
             ALUSrc_out <= ALUSrc_in;
             ALUSrc_pc_out <= ALUSrc_pc_in; 
@@ -42,6 +61,10 @@ module ID_EX (
             Branch_out <= Branch_in; 
             Jump_out <= Jump_in; 
             ALUOp_out <= ALUOp_in;
+            
+            // Cập nhật tín hiệu đồng bộ
+            funct7_out <= funct7_in;    
+            op_out <= op_in;
         end
     end
 endmodule

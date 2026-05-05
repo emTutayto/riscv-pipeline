@@ -1,16 +1,22 @@
 module DMEM (
-    input clk, rst, MemRead, MemWrite,
-    input [2:0] funct3, // T? instruction[14:12]
+    input clk, MemRead, MemWrite, // Đã bỏ rst ở đây
+    input [2:0] funct3, 
     input [31:0] address, write_data,
     output reg [31:0] read_data
 );
-    reg [7:0] dmem [0:1023]; // 256 word = 1024 byte
+    reg [7:0] dmem [0:1023]; // 1024 byte
     integer k;
-    always @(posedge clk or posedge rst) begin
-        if (rst) begin
-            for (k = 0; k < 1024; k = k + 1)
-                dmem[k] = 8'b0;
-        end else if (MemWrite) begin
+
+    // Khởi tạo RAM bằng 0 lúc nạp FPGA (Quartus hỗ trợ khởi tạo mảng trong initial block)
+    initial begin
+        for (k = 0; k < 1024; k = k + 1) begin
+            dmem[k] = 8'b0;
+        end
+    end
+
+    // GHI ĐỒNG BỘ (Bỏ điều kiện rst)
+    always @(posedge clk) begin
+        if (MemWrite) begin
             case (funct3)
                 3'b000: dmem[address] = write_data[7:0]; // SB
                 3'b001: {dmem[address+1], dmem[address]} = write_data[15:0]; // SH
@@ -18,6 +24,8 @@ module DMEM (
             endcase
         end
     end
+
+    // ĐỌC BẤT ĐỒNG BỘ (Giữ nguyên logic cực tốt của bạn)
     always @(*) begin
         if (MemRead) begin
             case (funct3)
@@ -28,7 +36,8 @@ module DMEM (
                 3'b101: read_data = {16'b0, dmem[address+1], dmem[address]}; // LHU
                 default: read_data = 32'b0;
             endcase
-        end else
+        end else begin
             read_data = 32'b0;
+        end
     end
 endmodule

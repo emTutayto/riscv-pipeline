@@ -8,11 +8,10 @@ module RegisterFile (
 );
 
     reg [31:0] regfile[0:31];
-    integer t;
 
     always @(posedge clk or posedge rst) begin
         if (rst) begin
-            // Reset all
+            // Khởi tạo giá trị (Phục vụ cho việc test)
             regfile[0] <= 32'h00000000;  
             regfile[1] <= 32'h00000003;
             regfile[2] <= 32'h00000002;
@@ -47,18 +46,23 @@ module RegisterFile (
             regfile[31] <= 32'h0000000A;
         end
         else begin
-            
-            regfile[0] <= 32'h00000000;
-
-            // k ghi de x0
-            if (RegWrite && (addD != 0)) begin
+            // Chỉ ghi khi có tín hiệu RegWrite và không phải thanh ghi x0
+            if (RegWrite && (addD != 5'd0)) begin
                 regfile[addD] <= WB_out;
             end
         end
     end 
     
-    assign dataA = (addA == 0) ? 32'h0 : regfile[addA]; // �?c t? h?p
-    assign dataB = (addB == 0) ? 32'h0 : regfile[addB]; // �?c t? h?p
-    assign dataD = regfile[addD];
+    // MỚI: Logic Write-Through (Internal Forwarding)
+    // Nếu đọc x0 -> luôn bằng 0
+    // Nếu đọc thanh ghi đang được ghi -> lấy trực tiếp WB_out
+    // Các trường hợp khác -> đọc bình thường từ regfile
+    assign dataA = (addA == 5'd0) ? 32'h0 : 
+                   ((RegWrite && (addA == addD)) ? WB_out : regfile[addA]);
+
+    assign dataB = (addB == 5'd0) ? 32'h0 : 
+                   ((RegWrite && (addB == addD)) ? WB_out : regfile[addB]);
+                   
+    assign dataD = regfile[addD]; // Output phụ (nếu bạn cần dùng để debug hiển thị LED)
 
 endmodule

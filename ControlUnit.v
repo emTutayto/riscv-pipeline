@@ -1,46 +1,92 @@
-module ControlUnit (op,RegWrite,ALUSrc,ALUSrc_pc,MemWrite,MemRead,ResultSrc,Branch,Jump,ALUOp,imm_sel);
-    input [6:0]op;
-    output RegWrite,ALUSrc,ALUSrc_pc,MemWrite,MemRead,Branch, Jump;
-    output [1:0] ALUOp;
-    output [1:0] ResultSrc;
-    output reg [2:0]imm_sel;
+module ControlUnit (
+    input [6:0] op,
+    output reg RegWrite, ALUSrc, ALUSrc_pc, MemWrite, MemRead, Branch, Jump,
+    output reg [1:0] ALUOp, ResultSrc,
+    output reg [2:0] imm_sel
+);
 
-	assign RegWrite = (op == 7'b0000011 || op == 7'b0110011 || op == 7'b0010011 || op == 7'b0110111 || op == 7'b1101111 || op == 7'b1100111) ? 1'b1 : 1'b0; // Th�m JAL, JALR
-    assign ALUSrc = (op == 7'b0000011 || op == 7'b0100011 || op == 7'b0010011 || op == 7'b1100111 || op == 7'b1101111 || op == 7'b1100011) ? 1'b1 : 1'b0; // Th�m JAL, JALR, branch
-    assign MemWrite = (op == 7'b0100011) ? 1'b1 : 1'b0;
-    assign MemRead = (op == 7'b0000011) ? 1'b1 : 1'b0;
-    assign ResultSrc = (op == 7'b0000011) ? 2'b01 : // Load: read_data
-                           (op == 7'b1101111 || op == 7'b1100111) ? 2'b10 : // JAL/JALR: PC_plus4
-                           2'b00; // ALU result
-    assign Branch = (op == 7'b1100011) ? 1'b1 : 1'b0;
-    assign Jump = (op == 7'b1101111 || op == 7'b1100111) ? 1'b1 : 1'b0; // JAL, JALR
-    assign ALUOp = (op == 7'b0110011 || op == 7'b0010011) ? 2'b10 : 
-                   (op == 7'b1100011) ? 2'b01 : 
-                   (op == 7'b1101111 || op == 7'b1100111) ? 2'b00 : // JAL, JALR d�ng ADD
-                   2'b00;
-    assign ALUSrc_pc = ( op == 7'b1100011 || op == 7'b1101111 ) ? 1 : 0;
-	always@(*) begin	
-	case(op)
-			7'b0010011, // I-type 
-            7'b0000011, // LOAD 
-            7'b1100111: // JALR
-                imm_sel = 3'b001;
+    always @(*) begin
+        // Giá trị mặc định (tránh sinh ra Latch trên FPGA)
+        RegWrite  = 1'b0;
+        ALUSrc    = 1'b0;
+        ALUSrc_pc = 1'b0;
+        MemWrite  = 1'b0;
+        MemRead   = 1'b0;
+        Branch    = 1'b0;
+        Jump      = 1'b0;
+        ALUOp     = 2'b00;
+        ResultSrc = 2'b00;
+        imm_sel   = 3'b000;
 
-            7'b0100011: // S-type 
-                imm_sel = 3'b010;
+        case(op)
+            7'b0110011: begin // R-type (ADD, SUB, AND, OR...)
+                RegWrite = 1'b1;
+                ALUSrc   = 1'b0; // B lấy từ thanh ghi rs2
+                ALUOp    = 2'b10;
+            end
 
-            7'b1100011: // B-type 
+            7'b0010011: begin // I-type (ADDI, ORI, SLTI...)
+                RegWrite = 1'b1;
+                ALUSrc   = 1'b1; // B lấy từ Immediate
+                ALUOp    = 2'b10;
+                imm_sel  = 3'b001;
+            end
+
+            7'b0000011: begin // I-type Load (LW)
+                RegWrite  = 1'b1;
+                ALUSrc    = 1'b1; // Tính địa chỉ = rs1 + imm
+                MemRead   = 1'b1;
+                ResultSrc = 2'b01; // Kết quả lấy từ Data Memory
+                imm_sel   = 3'b001;
+            end
+
+            7'b0100011: begin // S-type Store (SW)
+                ALUSrc   = 1'b1; // Tính địa chỉ = rs1 + imm
+                MemWrite = 1'b1;
+                imm_sel  = 3'b010;
+            end
+
+            7'b1100011: begin // B-type Branch (BEQ, BNE...)
+                // Địa chỉ nhánh đã được tính ở tầng ID. 
+                // Ở đây chỉ cần báo cho Hazard Unit biết đây là lệnh Branch
+                Branch  = 1'b1;
                 imm_sel = 3'b011;
+            end
 
-            7'b0110111, // U-type 
-            7'b0010111: 
-                imm_sel = 3'b100;
+            7'b1101111: begin // J-type JAL
+                RegWrite  = 1'b1;
+                Jump      = 1'b1;
+                ResultSrc = 2'b10; // Lưu PC+4 vào rd
+                imm_sel   = 3'b101;
+            end
 
-            7'b1101111: // J-type
-                imm_sel = 3'b101;
+            7'b1100111: begin // I-type JALR
+                RegWrite  = 1'b1;
+                Jump      = 1'b1;
+                ALUSrc    = 1'b1;  // Tính địa chỉ nhảy rs1 + imm ở ALU
+                ResultSrc = 2'b10; // Lưu PC+4 vào rd
+                imm_sel   = 3'b001;
+            end
 
-            default:
-                imm_sel = 3'b000;
+            7'b0110111: begin // U-type LUI
+                RegWrite = 1'b1;
+                ALUSrc   = 1'b1; // Đầu vào B là imm
+                // Lưu ý: ALUControl cần hiểu ALUOp=00 là phép cộng.
+                // Ở Top module, nếu input A của LUI không được đưa vào 0, LUI sẽ sai.
+                // Tốt nhất ở MUX cấp ALU A, bạn nên có chế độ chọn 0 cho LUI.
+                imm_sel  = 3'b100;
+            end
+
+            7'b0010111: begin // U-type AUIPC
+                RegWrite  = 1'b1;
+                ALUSrc    = 1'b1; // Đầu vào B là imm
+                ALUSrc_pc = 1'b1; // MỚI: Chỉ AUIPC mới dùng PC ở đầu vào A của ALU
+                imm_sel   = 3'b100;
+            end
+
+            default: begin
+                // Giữ nguyên giá trị mặc định là 0
+            end
         endcase
-        end
-endmodule 
+    end
+endmodule
