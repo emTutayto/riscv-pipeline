@@ -3,6 +3,7 @@
 📌 Overview
 
 This project implements a 32-bit RISC-V (RV32I) 5-stage pipelined CPU in Verilog.
+
 It demonstrates how pipelining improves performance by executing multiple instructions concurrently across different stages.
 
 ⚙️ Features
