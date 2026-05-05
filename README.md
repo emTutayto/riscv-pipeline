@@ -11,21 +11,21 @@ RV32I instruction set
 
 5 pipeline stages:
 
-  IF (Instruction Fetch)
+- IF (Instruction Fetch)
 
-  ID (Instruction Decode)
+- ID (Instruction Decode)
 
-  EX (Execute)
+- EX (Execute)
 
-  MEM (Memory)
+- MEM (Memory)
 
-  WB (Write Back)
+- WB (Write Back)
 
 Hazard handling:
 
-  Data hazards (forwarding, stalling)
+- Data hazards (forwarding, stalling)
 
-  Control hazards (pipeline flushing)
+- Control hazards (pipeline flushing)
 
 Modular Verilog design (datapath, control, hazard unit)
 
